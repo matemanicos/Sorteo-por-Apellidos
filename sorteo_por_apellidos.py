@@ -1,188 +1,105 @@
-from enum import IntEnum
 import os
+
+from enum import Enum, unique, auto
+from bidict import frozenbidict
 
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+from calculos import *
+from interfaz_de_usuario import *
 
-class Atributos(IntEnum):
+PORTADA = """SORTEO POR APELLIDOS, por Matemañicos.
+          
+El sorteo por apellidos es un tipo de sorteo muy usado por la facilidad con la que este se implementa. Aunque existen numerosas variantes, solo trataremos una en este programa:
+          
+Se toman al azar dos letras del abecedario y se busca un apellido que empiece por esas dos letras o sea el primero en orden alfabético después de ellas. Una vez encontrado este apellido, si este es el primer apellido de más de una persona, se repite este sorteo entre las personas que lo comparten según su segundo apellido. Es decir, volvemos a tomar dos letras al azar y buscamos de la misma forma que antes entre los segundos apellidos. Si vuelve a haber más de una persona con el segundo apellido vencedor, repetiremos esto con los nombres.
 
-    PRIMER_APELLIDO  = 0
-    SEGUNDO_APELLIDO = 1
-    NOMBRE           = 2
+Aunque pueda parecer un sorteo bien planteado, la realidad es muy distinta. Para ilustrar la injusticia de este sorteo y denunciar su uso en cualquier ámbito ponemos a su disposición este programa, para que puedan ver de primera mano el disparate en que consiste este sorteo. Para más información sobre el porqué de estas injusticias, visítese el artículo de Clara Grima: https://www.jotdown.es/2013/05/la-importancia-de-llamarse-grima/. 
 
-class Letra(IntEnum):
-
-    PRIMERA = 0
-    SEGUNDA = 1
+El funcionamiento de este programa es muy simple:
+   1) Se introduce una lista de nombres y apellidos al programa, ya sea a través de un formulario que ya viene integrado con este programa o escribiéndolo directamente.
+   2) El programa desglosa las probabilidades de cada participante de ser seleccionado.
+"""
 
 
-class Participante:
-    """Representa a un participante del sorteo."""
+@unique
+class Modalidad_Introduccion_Datos (Enum):
 
-    def __init__ (self, primer_apellido: str, segundo_apellido: str, nombre: str):
+    FORMULARIO = auto()
+    A_MANO     = auto()
 
-        self.ficha_nombre = [primer_apellido.lower(), segundo_apellido.lower(), nombre.lower()]
-        if len(primer_apellido) == 0 or \
-           len(segundo_apellido) == 0 or \
-           len(nombre) == 0:
-            raise ValueError('Se ha introducido un participante con alguno de sus atributos ---nombre, primer apellido o segundo apellido--- vacío.')
+    SALIR      = auto()
+
+def modalidad_introduccion_datos() -> Modalidad_Introduccion_Datos:
+
+    RESPUESTAS_VALIDAS = frozenbidict({Modalidad_Introduccion_Datos.FORMULARIO : 'A', Modalidad_Introduccion_Datos.A_MANO : 'B'})
+    print('¿Qué opción prefiere para introducir los datos?:\n   {0}) Utilizando el formulario de Google (recomendado para grupos grandes).\n   {1}) Introduciendo los nombres y apellidos a través del teclado.'.format(*RESPUESTAS_VALIDAS.values()))
+
+    
+    for intentos in range(10):
+        try:
+            respuesta = input('Introduzca <<{0}>> o <<{1}>>: '.format(*RESPUESTAS_VALIDAS.values()))
+            return RESPUESTAS_VALIDAS.inverse[respuesta]
         
-        self.probabilidad_de_ganar = -1
-    
-    
-    def get_atributo (self, atributo: Atributos) -> str:
-        """Devuelve el atributo `atributo` del participante."""
+        except:
+            print('La respuesta que ha dado no es válida. Inténtelo de nuevo.')
 
-        return self.ficha_nombre[atributo]
-    
-    def get_probabilidad(self) -> float:
-        """Devuelve la probabilidad de ganar del participante."""
-        return self.probabilidad_de_ganar
-    
-    def set_probabilidad(self, p: float):
-        """Asigna el valor `p` como la probabilidad de ganar del participante."""
-        self.probabilidad_de_ganar = p
+    raise Exception('Número de intentos máximo excedido.') # Dar más estructura a las excepciones.
 
-    def letra_atributo (self, letra: Letra, atributo: Atributos) -> str:
-        """Devuelve la letra `letra` del atributo `atributo` del participante."""
+def pedir_atributo (atributo) -> str:
 
-        return self.get_atributo(atributo)[letra]
-    
-    def primeras_dos_letras (self, atributo: Atributos) -> str:
-        """Devuelve las primeras dos letras del atributo `atributo` del participante."""
+    respuesta = input('Introduce el {0}: '.format(atributo))
 
-        return self.get_atributo(atributo)[0:2]
+    return respuesta
 
-    def __str__ (self) -> str:
-        """Escribe el nombre del participante como `primer apellido` `segundo apellido`, `nombre`."""
+@unique
+class Respuesta_Si_No (Enum):
 
-        return self.get_atributo(Atributos.PRIMER_APELLIDO).capitalize() + ' ' \
-               + self.get_atributo(Atributos.SEGUNDO_APELLIDO).capitalize() + ', ' \
-               + self.get_atributo(Atributos.NOMBRE).capitalize()
-               
-    def __repr__(self):
-        return f"Participante('{self.apellido1}', '{self.apellido2}', '{self.nombre}')"
-     
+    NO = auto()
+    SI = auto()
 
-N_LETRAS = 26
-VALOR_ULTIMA_LETRA  = ord('z') # Valor numérico ASCII de la letra z.
-VALOR_PRIMERA_LETRA = ord('a') # Valor numérico ASCII de la letra a.
+def quiere_mas_participantes () -> bool:
 
-def distancia_lexicografica (a: str, b: str) -> int:
-    """Dadas dos cadenas de texto `a` y `b`, devuelve la distancia lexicográfica entre ellas. Por ejemplo, `distancia_lexicografica('cy', 'cz') == 1` y `distancia_lexicografica('cy', 'da') == 2`."""
+    RESPUESTAS_VALIDAS = frozenbidict({Respuesta_Si_No.NO : 'N', Respuesta_Si_No.SI : 'S'})
+    print('¿Desea introducir más participantes?')
 
-    # Garantiza que a < b.
-    if a > b:
-        a, b = b, a
-    elif a == b:
-        return 0
-    
-    distancia = 0
+    for intentos in range(10):
+        respuesta = input('Responda <<{respuesta_si}>> si es que sí o <<{respuesta_no}>> si es que no: '.format(respuesta_si = RESPUESTAS_VALIDAS[Respuesta_Si_No.SI], respuesta_no = RESPUESTAS_VALIDAS[Respuesta_Si_No.NO]))
 
-    len_a = len(a)
-    len_b = len(b)
+        if respuesta == RESPUESTAS_VALIDAS[Respuesta_Si_No.NO]:
+            return False
+        elif respuesta == RESPUESTAS_VALIDAS[Respuesta_Si_No.SI]:
+            return True
+        else:
+            print('La respuesta que ha dado no es válida. Inténtelo de nuevo.')
 
-    longitud_comun = min(len_a, len_b)
-    longitud_maxima = max(len_a, len_b)
-    indice_maximo = longitud_maxima - 1
+    raise Exception('Número de intentos máximo excedido.') # Dar más estructura a las excepciones.
 
-    # Encuentra el primer índice i de forma que a[i] != b[i].
-    # En caso de que a[i] o b[i] no exista, el índice es el último valor
-    # para el que a[i] y b[i] existen.
-    try:
-        indice_primera_diferencia = [a[i] == b[i] for i in range(longitud_comun)].index(False)
+def quiere_introducir_otra_lista () -> bool:
 
-        # Hace lo de abajo, pero las cadenas que cuentaa deben ser de la
-        # longitud máxima.
-        aux = indice_maximo - indice_primera_diferencia
-        distancia += (ord(b[indice_primera_diferencia]) - ord(a[indice_primera_diferencia]) - 1) * N_LETRAS**aux
-        
-    except ValueError:
-        indice_primera_diferencia = longitud_comun - 1
+    RESPUESTAS_VALIDAS = frozenbidict({Respuesta_Si_No.NO : 'N', Respuesta_Si_No.SI : 'S'})
+    print('¿Desea introducir una nueva lista?')
 
-    
-    # Cuenta las cadenas de logitud máxima que coinciden hasta i-1 con a, pero
-    # estando estrictamente entre a y b para i en el rango dado.
-    for i in range(indice_primera_diferencia+1, len_a):
-        distancia += (VALOR_ULTIMA_LETRA - ord(a[i])) * N_LETRAS**(indice_maximo - i)
+    for intentos in range(10):
+        respuesta = input('Responda <<{respuesta_si}>> si es que sí o <<{respuesta_no}>> si es que no: '.format(respuesta_si = RESPUESTAS_VALIDAS[Respuesta_Si_No.SI], respuesta_no = RESPUESTAS_VALIDAS[Respuesta_Si_No.NO]))
 
-    # Lo mismo pero con b.
-    for i in range(indice_primera_diferencia+1, len_b):
-        distancia += (ord(b[i]) - VALOR_PRIMERA_LETRA) * N_LETRAS**(indice_maximo - i)
+        if respuesta == RESPUESTAS_VALIDAS[Respuesta_Si_No.NO]:
+            return False
+        elif respuesta == RESPUESTAS_VALIDAS[Respuesta_Si_No.SI]:
+            return True
+        else:
+            print('La respuesta que ha dado no es válida. Inténtelo de nuevo.')
 
-    # La propia cadena b tiene que ser contada.
-    distancia += 1
-
-    return distancia
-    
-
-def calcular_probabilidades (participantes: list, atributo: Atributos = Atributos.PRIMER_APELLIDO, p_condicionada: float = 1):
-    """Dada una lista de participantes `participantes` en el sorteo, devuelve una lista con las probabilidades de salir escogidos de cada uno."""
-    
-    # Ordenamos la lista en función del atributo que estemos comparando.
-    participantes.sort(key = lambda x: x.get_atributo(atributo))
-
-    # Si ya estamos comparando nombres, el proceso es distinto.
-    if atributo != Atributos.NOMBRE:
-
-        # Recorremos todos los participantes.
-        i = 0
-        while i < len(participantes):
-            participante = participantes[i]
-
-            # Si no es el primer participante y sus dos primeras letras
-            # coinciden con el anterior.
-            if i > 0 and participantes[i-1].primeras_dos_letras(atributo) == participante.primeras_dos_letras(atributo):
-                participante.set_probabilidad(0)
-                i += 1
-
-            # En caso de que no sea el primero, sus primeras dos letras no
-            # coincidiran con el anterior, ya que si no este lo hubiese
-            # saltado.
-            else:
-                # Calculamos la probabilidad de que este apellido ganase.
-                p = distancia_lexicografica(participantes[i-1].primeras_dos_letras(atributo), participante.primeras_dos_letras(atributo)) / N_LETRAS**2
-                
-                # Si es el primer participante, la distancia será la
-                # complementaria, ya que después de 'zz' se pasa a 'aa'.
-                if i == 0:
-                    p = 1 - p
-
-                # Vemos cuántos participantes más hay con el mismo atributo.
-                n_participantes_iguales = 1 + [otro_participante.get_atributo(atributo) == participante.get_atributo(atributo) for otro_participante in participantes[i+1:]].count(True)
-                
-                # Si hay más de uno, se continuan los cálculos con el siguiente
-                # atributo sobre dichos participantes.
-                if n_participantes_iguales > 1:
-                    calcular_probabilidades(participantes[i:i+n_participantes_iguales], atributo + 1, p)
-                
-                # Caso de que no, esta probabilidad es la de salir del
-                # participante actual.
-                else:
-                    participante.set_probabilidad(p_condicionada * p)
-
-                # Saltamos tantos índices como participantes con este apellido
-                # hayamos estudiado.
-                i += n_participantes_iguales
-
-    # Si ya estamos estudiando el nombre, entonces el único que gana es el
-    # primero por orden alfabético.                   
-    else:
-
-        participantes[0].set_probabilidad(p_condicionada)
-
-        for participante in participantes[1:]:
-            participante.set_probabilidad(0)
-    
+    raise Exception('Número de intentos máximo excedido.') # Dar más estructura a las excepciones.
 
 
-if __name__ == '__main__':   
-    
-    
+# Juntar ambas en una función que haga preguntas sí o no.
+def obtener_lista_formulario () -> list[Participante]:
+
     # Configurar la conexión con Google Sheets
     scope = ["https://spreadsheets.google.com/feeds",
-             "https://www.googleapis.com/auth/drive"]
+            "https://www.googleapis.com/auth/drive"]
     credenciales = ServiceAccountCredentials.from_json_keyfile_name(
         os.path.join(os.path.dirname(os.path.abspath(__file__)),"credentials.json"), scope)
     cliente = gspread.authorize(credenciales)
@@ -205,12 +122,29 @@ if __name__ == '__main__':
     
     # Convertir los datos en objetos Participante con el formato correcto
     lista_de_participantes = [Participante(apellido1, apellido2, nombre)
-                     for fecha, nombre, apellido1, apellido2 in datos]
+                    for fecha, nombre, apellido1, apellido2 in datos]
+    
+    return lista_de_participantes
 
-    # Calcula las probabilidades de los participantes.
-    # Dichas probabilidades quedan guardadas en los atributos de los objetos
-    # Participante.
-    calcular_probabilidades(lista_de_participantes)
+def obtener_lista_a_mano () -> list[Participante]:
+
+    lista_de_participantes = list()
+
+    quiere_otro_participante = True
+
+    while quiere_otro_participante:
+
+        primer_apellido  = pedir_atributo(Atributos.PRIMER_APELLIDO)
+        segundo_apellido = pedir_atributo(Atributos.SEGUNDO_APELLIDO)
+        nombre           = pedir_atributo(Atributos.NOMBRE)
+
+        lista_de_participantes.append(Participante(primer_apellido, segundo_apellido, nombre))
+
+        quiere_otro_participante = quiere_mas_participantes()
+
+    return lista_de_participantes
+
+def imprimir_tabla (lista_de_participantes: list[Participante]) -> None:
 
     # Ordenamos la lista por orden alfabético.
     lista_de_participantes.sort(key = lambda x : str(x))
@@ -224,3 +158,37 @@ if __name__ == '__main__':
         print('{0:<30} : {1:>6.3f} %'.format(str(participante), participante.get_probabilidad() * 100))
     print(caracter_linea * longitud_linea)
     print('\n')
+
+if __name__ == '__main__':   
+    
+    print(PORTADA)
+    
+    continuar_en_el_programa = True
+    while continuar_en_el_programa:
+
+        respuesta_modalidad_introduccion_datos = modalidad_introduccion_datos()
+        if respuesta_modalidad_introduccion_datos == Modalidad_Introduccion_Datos.SALIR:
+            
+            continuar_en_el_programa = False
+
+        else:
+            if respuesta_modalidad_introduccion_datos == Modalidad_Introduccion_Datos.FORMULARIO:
+
+                lista_de_participantes = obtener_lista_formulario()
+
+            elif respuesta_modalidad_introduccion_datos == Modalidad_Introduccion_Datos.A_MANO:
+                
+                lista_de_participantes = obtener_lista_a_mano()
+            
+            else:
+                raise Exception('Hay una opción de introducción de datos ofertada pero no implementada.')
+
+            # Calcula las probabilidades de los participantes.
+            # Dichas probabilidades quedan guardadas en los atributos de los objetos
+            # Participante.
+            calcular_probabilidades(lista_de_participantes)
+
+            imprimir_tabla(lista_de_participantes)
+
+            if not quiere_introducir_otra_lista():
+                continuar_en_el_programa = False
