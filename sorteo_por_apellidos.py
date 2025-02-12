@@ -39,6 +39,8 @@ def modalidad_introduccion_datos() -> Modalidad_Introduccion_Datos:
     for intentos in range(10):
         try:
             respuesta = input('Introduzca <<{0}>> o <<{1}>>: '.format(*RESPUESTAS_VALIDAS.values()))
+            respuesta = respuesta.upper()
+            
             return RESPUESTAS_VALIDAS.inverse[respuesta]
         
         except:
@@ -65,6 +67,7 @@ def quiere_mas_participantes () -> bool:
 
     for intentos in range(10):
         respuesta = input('Responda <<{respuesta_si}>> si es que sí o <<{respuesta_no}>> si es que no: '.format(respuesta_si = RESPUESTAS_VALIDAS[Respuesta_Si_No.SI], respuesta_no = RESPUESTAS_VALIDAS[Respuesta_Si_No.NO]))
+        respuesta = respuesta.upper()
 
         if respuesta == RESPUESTAS_VALIDAS[Respuesta_Si_No.NO]:
             return False
@@ -82,7 +85,7 @@ def quiere_introducir_otra_lista () -> bool:
 
     for intentos in range(10):
         respuesta = input('Responda <<{respuesta_si}>> si es que sí o <<{respuesta_no}>> si es que no: '.format(respuesta_si = RESPUESTAS_VALIDAS[Respuesta_Si_No.SI], respuesta_no = RESPUESTAS_VALIDAS[Respuesta_Si_No.NO]))
-
+        respuesta = respuesta.upper()
         if respuesta == RESPUESTAS_VALIDAS[Respuesta_Si_No.NO]:
             return False
         elif respuesta == RESPUESTAS_VALIDAS[Respuesta_Si_No.SI]:
