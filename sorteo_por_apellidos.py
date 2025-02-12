@@ -7,7 +7,6 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 from calculos import *
-from interfaz_de_usuario import *
 
 PORTADA = """SORTEO POR APELLIDOS, por Matemañicos.
           
@@ -134,14 +133,17 @@ def obtener_lista_a_mano () -> list[Participante]:
 
     while quiere_otro_participante:
 
+        print()
         primer_apellido  = pedir_atributo(Atributos.PRIMER_APELLIDO)
         segundo_apellido = pedir_atributo(Atributos.SEGUNDO_APELLIDO)
         nombre           = pedir_atributo(Atributos.NOMBRE)
 
         lista_de_participantes.append(Participante(primer_apellido, segundo_apellido, nombre))
 
+        print()
         quiere_otro_participante = quiere_mas_participantes()
-
+        
+    print()
     return lista_de_participantes
 
 def imprimir_tabla (lista_de_participantes: list[Participante]) -> None:
@@ -152,8 +154,7 @@ def imprimir_tabla (lista_de_participantes: list[Participante]) -> None:
     # Imprimimos la tabla.
     caracter_linea = '-'
     longitud_linea = 100
-    print('\n')
-    print(caracter_linea * longitud_linea)
+    print('Estas son las probabilidades de cada participante de resultar escogido:\n' + caracter_linea * longitud_linea)
     for participante in lista_de_participantes:
         print('{0:<30} : {1:>6.3f} %'.format(str(participante), participante.get_probabilidad() * 100))
     print(caracter_linea * longitud_linea)
@@ -161,7 +162,7 @@ def imprimir_tabla (lista_de_participantes: list[Participante]) -> None:
 
 if __name__ == '__main__':   
     
-    print(PORTADA)
+    print('\n\n' + PORTADA + '\n' + '#'*100 + '\n')
     
     continuar_en_el_programa = True
     while continuar_en_el_programa:
@@ -192,3 +193,5 @@ if __name__ == '__main__':
 
             if not quiere_introducir_otra_lista():
                 continuar_en_el_programa = False
+
+        print('\n')
