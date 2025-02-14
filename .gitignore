@@ -21,3 +21,6 @@ poetry.lock
 # Archivos de logs y bases de datos temporales
 .log
 .sqlite3
+
+# Archivos secretos
+scripts/credentials.json

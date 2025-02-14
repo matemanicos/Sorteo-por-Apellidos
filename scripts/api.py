@@ -1,6 +1,6 @@
 from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
-import time
+import time, sys
 
 from calculos import Participante, calcular_probabilidades
 from sorteo_por_apellidos import imprimir_tabla
@@ -11,7 +11,12 @@ SCOPES = [
     "https://www.googleapis.com/auth/forms.responses.readonly",
     "https://www.googleapis.com/auth/drive"
 ]
-creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", SCOPES)
+
+try:
+    creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", SCOPES)
+except FileNotFoundError:
+    print("Error de autentiación. Compruebe que el archivo credentials.json está en el directorio scrpits. Si el error persiste, contacte con matemanicos@unizar.es .")
+    sys.exit()
 
 # Conectar con la API de Drive y Forms
 drive_service = build("drive", "v3", credentials=creds)
@@ -51,22 +56,28 @@ def obtener_respuestas(form_id):
 def eliminar_formulario(form_id):
     """Elimina el formulario de Google Drive."""
     drive_service.files().delete(fileId=form_id).execute()
-    print("Formulario eliminado.")
+    print("Formulario eliminado.\n")
 
 def obtener_lista_formulario():
     """"Interfaz de usuario para extraer las respuestas del formulario o borrarlo y terminar con la actividad"""
+    print()
     form_id, form_url = crear_formulario()
     
     print("Presiona 'Enter' para obtener respuestas o 'q' para salir y eliminar el formulario.")
     while True:
-        tecla = input("[Enter] Obtener respuestas | [q] Salir y borrar formulario: ")
-        if tecla.lower() == 'q':
+        try:
+            tecla = input("[Enter] Obtener respuestas | [q] Salir y borrar formulario: ")
+            if tecla.lower() == 'q':
+                eliminar_formulario(form_id)
+                break
+            else:
+                lista_de_participantes = obtener_respuestas(form_id)
+                calcular_probabilidades(lista_de_participantes)
+                imprimir_tabla(lista_de_participantes)
+        except:
+            print("Se ha producido un error. Si el error persiste, contacte con matemanicos@unizar.es .")
             eliminar_formulario(form_id)
-            break
-        else:
-            lista_de_participantes = obtener_respuestas(form_id)
-            calcular_probabilidades(lista_de_participantes)
-            imprimir_tabla(lista_de_participantes)
+            sys.exit()
             
     return
             
