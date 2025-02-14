@@ -4,6 +4,6 @@ cd %~dp0
 
 cls
 
-python sorteo_por_apellidos.py
+cd scripts
 
-pause
+python sorteo_por_apellidos.py
