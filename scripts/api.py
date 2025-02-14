@@ -15,7 +15,7 @@ SCOPES = [
 try:
     creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", SCOPES)
 except FileNotFoundError:
-    print("Error de autentiación. Compruebe que el archivo credentials.json está en el directorio scrpits. Si el error persiste, contacte con matemanicos@unizar.es .")
+    print("Error de autenticación. Compruebe que el archivo credentials.json está en el directorio scrpits. Si el error persiste, contacte con matemanicos@unizar.es .")
     sys.exit()
 
 # Conectar con la API de Drive y Forms
