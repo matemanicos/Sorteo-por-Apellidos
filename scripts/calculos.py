@@ -1,8 +1,4 @@
 from enum import IntEnum
-import os
-
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
 
 
 class Atributos(IntEnum):
@@ -11,11 +7,17 @@ class Atributos(IntEnum):
     SEGUNDO_APELLIDO = 1
     NOMBRE           = 2
 
+    def __str__ (self) -> str:
+        REPRESENTACION = {Atributos.PRIMER_APELLIDO  : 'primer apellido',
+                          Atributos.SEGUNDO_APELLIDO : 'segundo apellido',
+                          Atributos.NOMBRE           : 'nombre'}
+        
+        return REPRESENTACION[self]
+
 class Letra(IntEnum):
 
     PRIMERA = 0
     SEGUNDA = 1
-
 
 class Participante:
     """Representa a un participante del sorteo."""
@@ -64,7 +66,6 @@ class Participante:
     def __repr__(self):
         return f"Participante('{self.apellido1}', '{self.apellido2}', '{self.nombre}')"
      
-
 N_LETRAS = 26
 VALOR_ULTIMA_LETRA  = ord('z') # Valor numérico ASCII de la letra z.
 VALOR_PRIMERA_LETRA = ord('a') # Valor numérico ASCII de la letra a.
@@ -116,7 +117,6 @@ def distancia_lexicografica (a: str, b: str) -> int:
 
     return distancia
     
-
 def calcular_probabilidades (participantes: list, atributo: Atributos = Atributos.PRIMER_APELLIDO, p_condicionada: float = 1):
     """Dada una lista de participantes `participantes` en el sorteo, devuelve una lista con las probabilidades de salir escogidos de cada uno."""
     
@@ -174,53 +174,3 @@ def calcular_probabilidades (participantes: list, atributo: Atributos = Atributo
 
         for participante in participantes[1:]:
             participante.set_probabilidad(0)
-    
-
-
-if __name__ == '__main__':   
-    
-    
-    # Configurar la conexión con Google Sheets
-    scope = ["https://spreadsheets.google.com/feeds",
-             "https://www.googleapis.com/auth/drive"]
-    credenciales = ServiceAccountCredentials.from_json_keyfile_name(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)),"credentials.json"), scope)
-    cliente = gspread.authorize(credenciales)
-    
-    # Abre el Google Sheets y selecciona la hoja
-    # Cambia por el nombre real de tu Google Sheet
-    spreadsheet = cliente.open_by_key("1R7wk0Y_wONLVzKe_PjaDbg6GaA-XNtLTtnwzhNJYeiU")
-    hoja = spreadsheet.sheet1  # Selecciona la primera hoja
-    
-    # Obtener los datos (suponiendo que están en columnas: Nombre, Apellido1, Apellido2)
-    datos_prov = hoja.get_all_values()
-    
-    ## elimina las líneas sin datos
-    i=1
-    for dato in datos_prov:
-        if dato[0] == '':
-            i+=1
-            
-    datos = datos_prov[i:]
-    
-    # Convertir los datos en objetos Participante con el formato correcto
-    lista_de_participantes = [Participante(apellido1, apellido2, nombre)
-                     for fecha, nombre, apellido1, apellido2 in datos]
-
-    # Calcula las probabilidades de los participantes.
-    # Dichas probabilidades quedan guardadas en los atributos de los objetos
-    # Participante.
-    calcular_probabilidades(lista_de_participantes)
-
-    # Ordenamos la lista por orden alfabético.
-    lista_de_participantes.sort(key = lambda x : str(x))
-
-    # Imprimimos la tabla.
-    caracter_linea = '-'
-    longitud_linea = 100
-    print('\n')
-    print(caracter_linea * longitud_linea)
-    for participante in lista_de_participantes:
-        print('{0:<30} : {1:>6.3f} %'.format(str(participante), participante.get_probabilidad() * 100))
-    print(caracter_linea * longitud_linea)
-    print('\n')
