@@ -1,0 +1,29 @@
+# Ignorar archivos de caché de Python
+__pycache__
+.pyc
+.pyo
+
+# Archivos de entornos virtuales
+venv
+env
+
+# Configuración de IDEs
+.vscode
+.idea
+.swp
+.swo
+
+# Archivos de dependencias
+Pipfile
+Pipfile.lock
+poetry.lock
+
+# Archivos de logs y bases de datos temporales
+.log
+.sqlite3
+
+# Archivos secretos
+scripts/credentials.json
+
+# Archivos comprimidos
+*.zip
