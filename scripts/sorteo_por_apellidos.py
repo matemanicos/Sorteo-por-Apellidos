@@ -7,7 +7,6 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 from calculos import *
-import api
 
 PORTADA = """SORTEO POR APELLIDOS, por Matemañicos.
           
@@ -179,7 +178,12 @@ if __name__ == '__main__':
         else:
             if respuesta_modalidad_introduccion_datos == Modalidad_Introduccion_Datos.FORMULARIO:
 
-                lista_de_participantes = api.obtener_lista_formulario()
+                try:
+                    import api  # Importamos el módulo "api" aquí para permitir que el programa funcione en local cuando no se seleccione esta opción.   
+                    lista_de_participantes = api.obtener_lista_formulario()
+                
+                except:
+                    print('No es posible utilizar esta modalidad de introducción de datos. Por favor, utilice otra.\n')
 
             elif respuesta_modalidad_introduccion_datos == Modalidad_Introduccion_Datos.A_MANO:
                 
