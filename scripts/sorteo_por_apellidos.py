@@ -7,6 +7,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 from calculos import *
+import api
 
 PORTADA = """SORTEO POR APELLIDOS, por Matemañicos.
           
@@ -178,22 +179,23 @@ if __name__ == '__main__':
         else:
             if respuesta_modalidad_introduccion_datos == Modalidad_Introduccion_Datos.FORMULARIO:
 
-                lista_de_participantes = obtener_lista_formulario()
+                lista_de_participantes = api.obtener_lista_formulario()
 
             elif respuesta_modalidad_introduccion_datos == Modalidad_Introduccion_Datos.A_MANO:
                 
                 lista_de_participantes = obtener_lista_a_mano()
+                
+                # Calcula las probabilidades de los participantes.
+                # Dichas probabilidades quedan guardadas en los atributos de los objetos
+                # Participante.
+                calcular_probabilidades(lista_de_participantes)
+
+                imprimir_tabla(lista_de_participantes)
             
             else:
                 raise Exception('Hay una opción de introducción de datos ofertada pero no implementada.')
 
-            # Calcula las probabilidades de los participantes.
-            # Dichas probabilidades quedan guardadas en los atributos de los objetos
-            # Participante.
-            calcular_probabilidades(lista_de_participantes)
-
-            imprimir_tabla(lista_de_participantes)
-
+            
             if not quiere_introducir_otra_lista():
                 continuar_en_el_programa = False
 
