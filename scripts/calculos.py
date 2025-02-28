@@ -1,5 +1,5 @@
 from enum import IntEnum
-
+from unidecode import unidecode
 
 class Atributos(IntEnum):
 
@@ -19,12 +19,34 @@ class Letra(IntEnum):
     PRIMERA = 0
     SEGUNDA = 1
 
+CARACTERES_A_MIRAR = 2 # Cuántos de los primeros caracteres se comparan.
+
+def normalizar_cadena (cadena: str) -> str:
+    """Toma cualquier cadena de texto que se haya introducido como nombre, primer apellido o segundo apellido y la modifica para que sea sencillo trabajar con ella. En particular, suprime tildes y otros símbolos de puntuación."""
+
+    # Iteramos caracter a caracter y los llevamos a ASCII.
+    nueva_cadena = ''
+    for i, cadena_i in enumerate(cadena):
+        # Si tenemos una "ñ", la añadimos sin más.
+        if cadena_i.lower() == 'ñ':
+            nueva_cadena += 'ñ'
+        # En el caso de que alguno de los caracteres que vayamos a comparar sea un espacio, lo suprimimos.
+        elif cadena_i != ' ':
+            nueva_cadena += unidecode(cadena_i).lower() # Quitamos tildes y otros acentos y convertimos a minúscula.
+    
+    return nueva_cadena
+
 class Participante:
     """Representa a un participante del sorteo."""
 
     def __init__ (self, primer_apellido: str, segundo_apellido: str, nombre: str):
 
-        self.ficha_nombre = [primer_apellido.lower(), segundo_apellido.lower(), nombre.lower()]
+        self.ficha_nombre_imprimible = [primer_apellido.lower(), \
+                                        segundo_apellido.lower(),\
+                                        nombre.lower()]
+        self.ficha_nombre = [normalizar_cadena(primer_apellido), \
+                             normalizar_cadena(segundo_apellido), \
+                             normalizar_cadena(nombre)]
         if len(primer_apellido) == 0 or \
            len(segundo_apellido) == 0 or \
            len(nombre) == 0:
@@ -59,16 +81,23 @@ class Participante:
     def __str__ (self) -> str:
         """Escribe el nombre del participante como `primer apellido` `segundo apellido`, `nombre`."""
 
-        return self.get_atributo(Atributos.PRIMER_APELLIDO).capitalize() + ' ' \
-               + self.get_atributo(Atributos.SEGUNDO_APELLIDO).capitalize() + ', ' \
-               + self.get_atributo(Atributos.NOMBRE).capitalize()
+        return self.ficha_nombre_imprimible[Atributos.PRIMER_APELLIDO].capitalize() + ' ' \
+               + self.ficha_nombre_imprimible[Atributos.SEGUNDO_APELLIDO].capitalize() + ', ' \
+               + self.ficha_nombre_imprimible[Atributos.NOMBRE].capitalize()
                
     def __repr__(self):
         return f"Participante('{self.apellido1}', '{self.apellido2}', '{self.nombre}')"
      
-N_LETRAS = 26
-VALOR_ULTIMA_LETRA  = ord('z') # Valor numérico ASCII de la letra z.
-VALOR_PRIMERA_LETRA = ord('a') # Valor numérico ASCII de la letra a.
+
+LETRAS = tuple('abcdefghijklmnñopqrstuvwxyz')
+N_LETRAS = len(LETRAS)
+
+
+def ord_personalizado (letra: str) -> int:
+    """Devuelve la posición de la letra en el orden alfabético del Castellano, incluyendo la "ñ"."""
+
+    return LETRAS.index(letra)
+
 
 def distancia_lexicografica (a: str, b: str) -> int:
     """Dadas dos cadenas de texto `a` y `b`, devuelve la distancia lexicográfica entre ellas. Por ejemplo, `distancia_lexicografica('cy', 'cz') == 1` y `distancia_lexicografica('cy', 'da') == 2`."""
@@ -97,7 +126,7 @@ def distancia_lexicografica (a: str, b: str) -> int:
         # Hace lo de abajo, pero las cadenas que cuentaa deben ser de la
         # longitud máxima.
         aux = indice_maximo - indice_primera_diferencia
-        distancia += (ord(b[indice_primera_diferencia]) - ord(a[indice_primera_diferencia]) - 1) * N_LETRAS**aux
+        distancia += (ord_personalizado(b[indice_primera_diferencia]) - ord_personalizado(a[indice_primera_diferencia]) - 1) * N_LETRAS**aux
         
     except ValueError:
         indice_primera_diferencia = longitud_comun - 1
@@ -106,11 +135,11 @@ def distancia_lexicografica (a: str, b: str) -> int:
     # Cuenta las cadenas de logitud máxima que coinciden hasta i-1 con a, pero
     # estando estrictamente entre a y b para i en el rango dado.
     for i in range(indice_primera_diferencia+1, len_a):
-        distancia += (VALOR_ULTIMA_LETRA - ord(a[i])) * N_LETRAS**(indice_maximo - i)
+        distancia += (N_LETRAS - 1 - ord_personalizado(a[i])) * N_LETRAS**(indice_maximo - i)
 
     # Lo mismo pero con b.
     for i in range(indice_primera_diferencia+1, len_b):
-        distancia += (ord(b[i]) - VALOR_PRIMERA_LETRA) * N_LETRAS**(indice_maximo - i)
+        distancia += ord_personalizado(b[i]) * N_LETRAS**(indice_maximo - i)
 
     # La propia cadena b tiene que ser contada.
     distancia += 1
