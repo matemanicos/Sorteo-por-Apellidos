@@ -123,54 +123,43 @@ def calcular_probabilidades (participantes: list, atributo: Atributos = Atributo
     # Ordenamos la lista en función del atributo que estemos comparando.
     participantes.sort(key = lambda x: x.get_atributo(atributo))
 
-    # Si ya estamos comparando nombres, el proceso es distinto.
-    if atributo != Atributos.NOMBRE:
+    # Recorremos todos los participantes.
+    i = 0
+    while i < len(participantes):
+        participante = participantes[i]
 
-        # Recorremos todos los participantes.
-        i = 0
-        while i < len(participantes):
-            participante = participantes[i]
-
-            # Si no es el primer participante y sus dos primeras letras
-            # coinciden con el anterior.
-            if i > 0 and participantes[i-1].primeras_dos_letras(atributo) == participante.primeras_dos_letras(atributo):
-                participante.set_probabilidad(0)
-                i += 1
-
-            # En caso de que no sea el primero, sus primeras dos letras no
-            # coincidiran con el anterior, ya que si no este lo hubiese
-            # saltado.
-            else:
-                # Calculamos la probabilidad de que este apellido ganase.
-                p = distancia_lexicografica(participantes[i-1].primeras_dos_letras(atributo), participante.primeras_dos_letras(atributo)) / N_LETRAS**2
-                
-                # Si es el primer participante, la distancia será la
-                # complementaria, ya que después de 'zz' se pasa a 'aa'.
-                if i == 0:
-                    p = 1 - p
-
-                # Vemos cuántos participantes más hay con el mismo atributo.
-                n_participantes_iguales = 1 + [otro_participante.get_atributo(atributo) == participante.get_atributo(atributo) for otro_participante in participantes[i+1:]].count(True)
-                
-                # Si hay más de uno, se continuan los cálculos con el siguiente
-                # atributo sobre dichos participantes.
-                if n_participantes_iguales > 1:
-                    calcular_probabilidades(participantes[i:i+n_participantes_iguales], atributo + 1, p)
-                
-                # Caso de que no, esta probabilidad es la de salir del
-                # participante actual.
-                else:
-                    participante.set_probabilidad(p_condicionada * p)
-
-                # Saltamos tantos índices como participantes con este apellido
-                # hayamos estudiado.
-                i += n_participantes_iguales
-
-    # Si ya estamos estudiando el nombre, entonces el único que gana es el
-    # primero por orden alfabético.                   
-    else:
-
-        participantes[0].set_probabilidad(p_condicionada)
-
-        for participante in participantes[1:]:
+        # Si no es el primer participante y sus dos primeras letras
+        # coinciden con el anterior.
+        if i > 0 and participantes[i-1].primeras_dos_letras(atributo) == participante.primeras_dos_letras(atributo):
             participante.set_probabilidad(0)
+            i += 1
+
+        # En caso de que no sea el primero, sus primeras dos letras no
+        # coincidiran con el anterior, ya que si no este lo hubiese
+        # saltado.
+        else:
+            # Calculamos la probabilidad de que este apellido ganase.
+            p = distancia_lexicografica(participantes[i-1].primeras_dos_letras(atributo), participante.primeras_dos_letras(atributo)) / N_LETRAS**2
+            
+            # Si es el primer participante, la distancia será la
+            # complementaria, ya que después de 'zz' se pasa a 'aa'.
+            if i == 0:
+                p = 1 - p
+
+            # Vemos cuántos participantes más hay con el mismo atributo.
+            n_participantes_iguales = 1 + [otro_participante.get_atributo(atributo) == participante.get_atributo(atributo) for otro_participante in participantes[i+1:]].count(True)
+            
+            # Si hay más de uno, se continuan los cálculos con el siguiente
+            # atributo sobre dichos participantes.
+            if n_participantes_iguales > 1:
+                calcular_probabilidades(participantes[i:i+n_participantes_iguales], atributo + 1, p)
+            
+            # Caso de que no, esta probabilidad es la de salir del
+            # participante actual.
+            else:
+                participante.set_probabilidad(p_condicionada * p)
+
+            # Saltamos tantos índices como participantes con este apellido
+            # hayamos estudiado.
+            i += n_participantes_iguales
+
