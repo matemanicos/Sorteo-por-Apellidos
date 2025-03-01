@@ -1,5 +1,7 @@
 from googleapiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
+import qrcode
+from PIL import Image
 import time, sys
 
 from calculos import Participante, calcular_probabilidades
@@ -22,6 +24,22 @@ except FileNotFoundError:
 drive_service = build("drive", "v3", credentials=creds)
 forms_service = build("forms", "v1", credentials=creds)
 
+def generar_qr(url):
+    """Genera un código QR a partir de una URL y lo muestra en pantalla."""
+    qr = qrcode.QRCode(
+        version=1,  # Tamaño del QR (1 es el más pequeño)
+        error_correction=qrcode.constants.ERROR_CORRECT_L,  # Nivel de corrección de errores
+        box_size=10,  # Tamaño de cada caja del QR
+        border=4  # Bordes del QR
+    )
+    qr.add_data(url)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill="black", back_color="white").convert("RGB")  # Convertir a imagen PIL
+    img.show()
+    
+    return url
+
 def crear_formulario():
     """Crea el formulario para introducir participantes."""
     form_metadata = {"info": {"title": "Sorteo por apellidos"}}
@@ -36,6 +54,12 @@ def crear_formulario():
     }
     forms_service.forms().batchUpdate(formId=form["formId"], body=preguntas).execute()
     print("Formulario creado:", form["responderUri"])
+    try:
+        generar_qr(form["responderUri"])
+    except:
+        print("Se ha producido un error. Si el error persiste, contacte con matemanicos@unizar.es .")
+        eliminar_formulario(form["formId"])
+        sys.exit()
     return form["formId"], form["responderUri"]
 
 def obtener_respuestas(form_id):
