@@ -63,19 +63,113 @@ def crear_formulario():
     return form["formId"], form["responderUri"]
 
 def obtener_respuestas(form_id):
-    """Obtiene las respuestas directamente desde Google Forms y las formatea."""
-    responses = forms_service.forms().responses().list(formId=form_id).execute()
+    """
+    Obtiene las respuestas desde la Forms API asegurando la asignación
+    correcta nombre / apellido1 / apellido2 utilizando los títulos de
+    las preguntas del propio formulario como fuente de verdad.
+    """
     participantes = []
-    
-    if "responses" in responses:
-        for response in responses["responses"]:
-            answers = iter(response.get("answers", {}).items())
-            nombre = next(answers)[1].get("textAnswers", {}).get("answers", [{}])[0].get("value", "")
-            apellido1 = next(answers)[1].get("textAnswers", {}).get("answers", [{}])[0].get("value", "")
-            apellido2 = next(answers)[1].get("textAnswers", {}).get("answers", [{}])[0].get("value", "")
-            participantes.append(Participante(apellido1,apellido2,nombre))
-    
+
+    # 1) Obtener la estructura del formulario para mapear questionId -> título
+    try:
+        form = forms_service.forms().get(formId=form_id).execute()
+    except Exception as e:
+        print("Error obteniendo la estructura del formulario:", e)
+        return participantes
+
+    qid_to_title = {}
+    items = form.get("items", []) or []
+    for item in items:
+        # extraer título y questionId si existe
+        title = item.get("title", "") or item.get("label", "")
+        q = item.get("questionItem", {}).get("question", {})
+        qid = q.get("questionId") or item.get("itemId")
+        if qid:
+            qid_to_title[str(qid)] = title.strip().lower()
+
+    # 2) Obtener respuestas
+    try:
+        resp = forms_service.forms().responses().list(formId=form_id).execute()
+    except Exception as e:
+        print("Error obteniendo respuestas:", e)
+        return participantes
+
+    for r in resp.get("responses", []):
+        answers = r.get("answers", {}) or {}
+
+        # campos por defecto vacíos
+        nombre = ""
+        apellido1 = ""
+        apellido2 = ""
+
+        # 3) Primero: intentar asignar por título asociado al questionId
+        for qid, answer_obj in answers.items():
+            text = ""
+            # extraer texto de la respuesta (varios formatos posibles)
+            if "textAnswers" in answer_obj:
+                arr = answer_obj["textAnswers"].get("answers", [])
+                if arr:
+                    text = arr[0].get("value", "").strip()
+            elif "textAnswer" in answer_obj:  # por si hay variantes
+                text = str(answer_obj.get("textAnswer", "")).strip()
+            else:
+                # fallback sobre cualquier campo 'value'
+                # (por si alguna respuesta viene en otro formato)
+                for v in answer_obj.values():
+                    if isinstance(v, str) and v.strip():
+                        text = v.strip()
+                        break
+
+            title = qid_to_title.get(str(qid), "").lower()
+
+            # heurística por palabras clave en el título
+            if "nombre" in title or "name" in title:
+                nombre = text if text else nombre
+            elif "apellido 1" in title or "primer apellido" in title or "apellido1" in title or "apellido 1" in title:
+                apellido1 = text if text else apellido1
+            elif "apellido 2" in title or "segundo apellido" in title or "apellido2" in title:
+                apellido2 = text if text else apellido2
+            else:
+                # si el título no ayuda, intentar detectar por el contenido (poco fiable)
+                # ej. si parece un nombre (inicial mayúscula sin espacios largos)
+                if not nombre and text and " " in text and len(text.split()) >= 2:
+                    # si hay dos palabras, quizá sea "Nombre Apellido" -> tomar primera como nombre
+                    nombre = text.split()[0]
+                elif not nombre and not apellido1 and text:
+                    # asignar provisionalmente en orden de aparición
+                    if not nombre:
+                        nombre = text
+                    elif not apellido1:
+                        apellido1 = text
+                    else:
+                        apellido2 = text
+
+        # 4) Fallback: si no se detectó por títulos, usar el orden de aparición de answers
+        if not (nombre and apellido1):
+            vals = []
+            for qid, answer_obj in answers.items():
+                arr = answer_obj.get("textAnswers", {}).get("answers", [])
+                if arr:
+                    v = arr[0].get("value", "").strip()
+                    if v:
+                        vals.append(v)
+            # intentar mapear [fecha?] nombre ap1 ap2  -> buscamos por el patrón más común
+            if len(vals) >= 3:
+                # si hay 4 y la primera es fecha, muchas hojas incluyen timestamp; asumir vals[-3],[-2],[-1]
+                nombre = nombre or vals[-3]
+                apellido1 = apellido1 or vals[-2]
+                apellido2 = apellido2 or vals[-1]
+            elif len(vals) == 2:
+                nombre = nombre or vals[0]
+                apellido1 = apellido1 or vals[1]
+            elif len(vals) == 1:
+                nombre = nombre or vals[0]
+
+        participantes.append(Participante(apellido1, apellido2, nombre))
+
     return participantes
+
+
 
 def eliminar_formulario(form_id):
     """Elimina el formulario de Google Drive."""
