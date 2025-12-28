@@ -1,7 +1,5 @@
 INSTRUCCIONES PARA EL USO DEL PROGRAMA DE SORTEO POR APELLIDOS
 
-IMPORTANTE: Para utilizar el programa, descargarlo desde "Releases" para evitar problemas de autenticación.
-
 Si es la primera vez que lo usa...
 - Instalar Python en el ordenador
 - Ejecutar "install.bat"

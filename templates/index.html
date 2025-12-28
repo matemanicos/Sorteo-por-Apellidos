@@ -1,0 +1,88 @@
+{% extends "base.html" %} {% block content %}
+<!-- Columna derecha -->
+<div class="right-column space-between">
+  <div class="form-section">
+    <form class="form-section" method="POST" action="add-player">
+      <h2>Introducir participantes</h2>
+
+      <div class="form-row">
+        <input type="text" placeholder="Nombre" name="name" required />
+        <input
+          type="text"
+          placeholder="Primer Apellido"
+          name="surname1"
+          required
+        />
+        <input
+          type="text"
+          placeholder="Segundo Apellido"
+          name="surname2"
+          required
+        />
+      </div>
+
+      <button class="btn-add">Añadir</button>
+    </form>
+    <div style="margin-top: 1.5rem">
+      <h3>Participantes inscritos</h3>
+
+      {% if players %}
+      <div class="participantes-grid">
+        {% for p in players %}
+        <div class="participante">
+          <span class="participante-nombre">
+            {{ p.surname1 }} {{ p.surname2 }}, {{ p.name }}
+          </span>
+
+          <form method="post" action="delete-player">
+            <input
+              type="hidden"
+              name="id"
+              value="{{ players.index({
+                        'name': p.name,
+                        'surname1': p.surname1,
+                        'surname2': p.surname2
+                    }) }}"
+            />
+            <button
+              type="submit"
+              class="btn-delete"
+              aria-label="Eliminar participante"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                aria-hidden="true"
+              >
+                <line x1="4" y1="4" x2="20" y2="20" />
+                <line x1="20" y1="4" x2="4" y2="20" />
+              </svg>
+            </button>
+          </form>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p>No hay participantes todavía.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="buttons-bottom">
+    {% if players %}
+    <div class="buttons-bottom">
+      <a href="{{ url_for('display_probabilities') }}" class="btn-sortear">
+        Sortear
+      </a>
+    </div>
+    {% else %}
+    <div class="buttons-bottom">
+      <a href="{{ url_for('get_players_from_form') }}" class="btn-forms">
+        Añadir participantes desde un QR
+      </a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

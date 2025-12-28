@@ -1,5 +1,0 @@
-cd %~dp0
-
-cd scripts
-
-python sorteo_por_apellidos.py
