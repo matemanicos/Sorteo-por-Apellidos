@@ -1,0 +1,26 @@
+{% extends "base.html" %} {% block content %}
+<!-- Columna derecha -->
+<div class="right-column">
+  <div class="right-content qr-content">
+    <h2>Escanea el código QR para participar</h2>
+
+    <div class="qr-wrapper">
+      <img
+        src="data:image/png;base64,{{ qr_code }}"
+        alt="Código QR para el formulario"
+      />
+    </div>
+  </div>
+
+  <div class="right-actions">
+    <div class="buttons-bottom">
+      <a
+        href="{{ url_for('extract_players',form_id=form_id) }}"
+        class="btn-sortear"
+      >
+        Extraer
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

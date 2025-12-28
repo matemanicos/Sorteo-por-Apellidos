@@ -40,7 +40,10 @@ class Participante:
     """Representa a un participante del sorteo."""
 
     def __init__ (self, primer_apellido: str, segundo_apellido: str, nombre: str):
-
+        self.primer_apellido = primer_apellido
+        self.segundo_apellido = segundo_apellido
+        self.nombre = nombre
+        
         self.ficha_nombre_imprimible = [primer_apellido.lower(), \
                                         segundo_apellido.lower(),\
                                         nombre.lower()]

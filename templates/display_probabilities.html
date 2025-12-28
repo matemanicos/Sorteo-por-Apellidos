@@ -1,0 +1,30 @@
+{% extends "base.html" %} {% block content %}
+<!-- Columna derecha -->
+<div class="right-column start">
+  <h2>Probabilidades de ganar de cada participante</h2>
+
+  {% if probabilized_list %}
+  <div class="barras-container">
+    {% for p in probabilized_list %}
+    <div class="barra-fila">
+      <span class="barra-nombre">
+        {{ p.surname1 }} {{ p.surname2 }}, {{ p.name }}
+      </span>
+
+      <div class="barra-wrapper">
+        <div class="barra" style="width: {{ p.prob }}%;"></div>
+      </div>
+
+      <span class="barra-porcentaje"> {{ "%.1f"|format(p.prob) }} % </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p>No hay resultados para mostrar.</p>
+  {% endif %}
+
+  <div class="right-actions">
+    <a href="{{ url_for('index') }}" class="btn-sortear"> Volver a inicio </a>
+  </div>
+</div>
+{% endblock %}
