@@ -184,7 +184,7 @@ def calcular_probabilidades (participantes: list, atributo: Atributos = Atributo
             # Si hay más de uno, se continuan los cálculos con el siguiente
             # atributo sobre dichos participantes.
             if n_participantes_iguales > 1:
-                calcular_probabilidades(participantes[i:i+n_participantes_iguales], atributo + 1, p)
+                calcular_probabilidades(participantes[i:i+n_participantes_iguales], atributo + 1, p * p_condicionada)
             
             # Caso de que no, esta probabilidad es la de salir del
             # participante actual.
