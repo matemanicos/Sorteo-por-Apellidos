@@ -70,7 +70,6 @@ def display_probabilities():
     if not players:
         return redirect(url_for('index'))
     else:
-        print(players)
         player_list = []
         for p in players:
             player_list.append(Participante(p['surname1'], p['surname2'], p['name']))
@@ -87,7 +86,6 @@ def display_probabilities():
             } for p in player_list
         ]
         probabilized_list.sort(key = lambda x : -x['prob'])
-        print(probabilized_list)
         return render_template('display_probabilities.html', probabilized_list = probabilized_list)
     
 
