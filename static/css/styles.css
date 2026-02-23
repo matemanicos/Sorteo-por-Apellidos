@@ -314,3 +314,8 @@ button {
 .license:hover {
     opacity: 1;
 }
+
+.author{
+    font-size: smaller;
+    color:#313131
+}
