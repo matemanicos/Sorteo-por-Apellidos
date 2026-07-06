@@ -44,7 +44,7 @@ def get_services():
 
 def crear_formulario():
     """Crea el formulario para introducir participantes."""
-    _, forms_service = get_services()
+    drive_service, forms_service = get_services()
 
     form_metadata = {"info": {"title": "Sorteo por apellidos"}}
     form = forms_service.forms().create(body=form_metadata).execute()
@@ -57,6 +57,18 @@ def crear_formulario():
         ]
     }
     forms_service.forms().batchUpdate(formId=form["formId"], body=preguntas).execute()
+
+    # Publicar el formulario y compartirlo con "cualquiera con el enlace" para
+    # que pueda responder aunque no pertenezca a la organización unizar.es.
+    forms_service.forms().setPublishSettings(
+        formId=form["formId"],
+        body={"publishSettings": {"publishState": {"isPublished": True, "isAcceptingResponses": True}}}
+    ).execute()
+    drive_service.permissions().create(
+        fileId=form["formId"],
+        body={"type": "anyone", "view": "published", "role": "reader"}
+    ).execute()
+
     print("Formulario creado:", form["responderUri"])
     return form["formId"], form["responderUri"]
 
