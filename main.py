@@ -1,7 +1,9 @@
 from flask import Flask, render_template, session, request, redirect, url_for
 import secrets
 import datetime
+import os
 import scripts.api
+from google_auth_oauthlib.flow import Flow
 
 import qrcode
 from io import BytesIO
@@ -12,6 +14,42 @@ from scripts.calculo_de_probabilidad import *
 app = Flask(__name__)
 app.secret_key = b'%s' % secrets.token_bytes()
 app.config['PERMANENT_SESSION_LIFETIME'] = datetime.timedelta(minutes=60)
+
+# Cliente OAuth (tipo "Web application") descargado de Google Cloud Console.
+CLIENT_SECRETS_FILE = os.path.join(os.path.dirname(__file__), "scripts", "client_secret.json")
+# Debe coincidir EXACTAMENTE con un URI de redirección autorizado en Cloud Console.
+OAUTH_REDIRECT_URI = os.environ.get("OAUTH_REDIRECT_URI", "http://127.0.0.1:5000/oauth2callback")
+
+def _build_oauth_flow(state=None):
+    return Flow.from_client_secrets_file(
+        CLIENT_SECRETS_FILE,
+        scopes=scripts.api.SCOPES,
+        state=state,
+        redirect_uri=OAUTH_REDIRECT_URI,
+    )
+
+@app.route('/authorize')
+def authorize():
+    """Punto de entrada para que la cuenta unizar.es conceda acceso a su Drive/Forms."""
+    flow = _build_oauth_flow()
+    authorization_url, state = flow.authorization_url(
+        access_type='offline',
+        include_granted_scopes='true',
+        prompt='consent',
+    )
+    session['oauth_state'] = state
+    return redirect(authorization_url)
+
+@app.route('/oauth2callback')
+def oauth2callback():
+    flow = _build_oauth_flow(state=session.get('oauth_state'))
+    flow.fetch_token(authorization_response=request.url)
+
+    creds = flow.credentials
+    with open(scripts.api.TOKEN_PATH, 'w') as f:
+        f.write(creds.to_json())
+
+    return "Autorización completada. Ya puede volver a la aplicación y usar el formulario de Google."
 
 @app.route('/')
 def index():
@@ -48,19 +86,25 @@ def delete_player():
 
 @app.route('/get-players-from-form')
 def get_players_from_form():
-    form_id, form_url = scripts.api.crear_formulario()
+    try:
+        form_id, form_url = scripts.api.crear_formulario()
+    except scripts.api.NoAutorizado:
+        return redirect(url_for('authorize'))
 
     qr_img = qrcode.make(form_url)
     buffer = BytesIO()
     qr_img.save(buffer, format="PNG")
 
     qr_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
-    
+
     return render_template('get-players-from-form.html',qr_code=qr_base64, form_id=form_id)
 
 @app.route('/extract-players', methods=['GET'])
 def extract_players():
-    players = scripts.api.obtener_respuestas(request.args.get('form_id'))
+    try:
+        players = scripts.api.obtener_respuestas(request.args.get('form_id'))
+    except scripts.api.NoAutorizado:
+        return redirect(url_for('authorize'))
     session['players'] = players
     return redirect(url_for('index'))
 

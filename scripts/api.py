@@ -1,32 +1,54 @@
 from googleapiclient.discovery import build
-from oauth2client.service_account import ServiceAccountCredentials
-import time, sys, os
+from google.oauth2.credentials import Credentials
+from google.auth.transport.requests import Request
+import sys, os
 
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
-
-# Autenticación con la cuenta de servicio
+# Autenticación por consentimiento OAuth (la cuenta unizar.es concede acceso
+# a su propio Drive una única vez a través de /authorize en la app Flask).
 SCOPES = [
     "https://www.googleapis.com/auth/forms.body",
     "https://www.googleapis.com/auth/forms.responses.readonly",
     "https://www.googleapis.com/auth/drive"
 ]
 
-try:
-    creds = ServiceAccountCredentials.from_json_keyfile_name("scripts/credentials.json", SCOPES)
-except FileNotFoundError:
-    print("Error de autenticación. Compruebe que el archivo credentials.json está en el directorio scrpits. Si el error persiste, contacte con matemanicos@unizar.es .")
-    sys.exit()
+TOKEN_PATH = os.path.join(os.path.dirname(__file__), "token.json")
 
-# Conectar con la API de Drive y Forms
-drive_service = build("drive", "v3", credentials=creds)
-forms_service = build("forms", "v1", credentials=creds)
+
+class NoAutorizado(Exception):
+    """Se lanza cuando todavía no se ha concedido acceso vía /authorize."""
+
+
+def _load_credentials():
+    if not os.path.exists(TOKEN_PATH):
+        return None
+
+    creds = Credentials.from_authorized_user_file(TOKEN_PATH, SCOPES)
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+        with open(TOKEN_PATH, "w") as f:
+            f.write(creds.to_json())
+    return creds
+
+
+def get_services():
+    """Construye los clientes de Drive y Forms a partir del token guardado."""
+    creds = _load_credentials()
+    if not creds or not creds.valid:
+        raise NoAutorizado(
+            "No hay credenciales válidas. Visite /authorize para conceder acceso "
+            "a Google Drive/Forms con su cuenta de unizar.es."
+        )
+    drive_service = build("drive", "v3", credentials=creds)
+    forms_service = build("forms", "v1", credentials=creds)
+    return drive_service, forms_service
 
 def crear_formulario():
     """Crea el formulario para introducir participantes."""
+    _, forms_service = get_services()
+
     form_metadata = {"info": {"title": "Sorteo por apellidos"}}
     form = forms_service.forms().create(body=form_metadata).execute()
-    
+
     preguntas = {
         "requests": [
             {"createItem": {"item": {"title": "Nombre", "questionItem": {"question": {"required": True, "textQuestion": {}}}}, "location": {"index": 0}}},
@@ -40,6 +62,7 @@ def crear_formulario():
 
 def eliminar_formulario(form_id):
     """Elimina el formulario de Google Drive."""
+    drive_service, _ = get_services()
     drive_service.files().delete(fileId=form_id).execute()
     print("Formulario eliminado.\n")
 
@@ -49,6 +72,7 @@ def obtener_respuestas(form_id):
     correcta nombre / apellido1 / apellido2 utilizando los títulos de
     las preguntas del propio formulario como fuente de verdad.
     """
+    _, forms_service = get_services()
     participantes = []
 
     # 1) Obtener la estructura del formulario para mapear questionId -> título
