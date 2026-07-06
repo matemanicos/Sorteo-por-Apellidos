@@ -24,6 +24,8 @@ poetry.lock
 
 # Archivos secretos
 scripts/credentials.json
+scripts/client_secret.json
+scripts/token.json
 
 # Archivos comprimidos
 *.zip
